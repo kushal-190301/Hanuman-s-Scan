@@ -32,7 +32,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-API_KEY = "a37ececeb3a7ca94d9f585825df11c65098066b5597bb43d8c514d1dfcc309ae3205c15ebf81e131"
+API_KEY = "Your API KEY"
 
 @app.route('/', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")  # Rate limiting

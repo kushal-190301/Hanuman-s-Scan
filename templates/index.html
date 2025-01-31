@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hanuman's Guardian</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            text-align: center;
+            color: #DC143C;
+            margin-bottom: 30px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .input-result-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .box {
+            flex: 1;
+            background: rgb(0, 255, 242);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: rgba(255, 255, 255, 0.989);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .reported-by-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .error {
+            color: red;
+        }
+        .ip-status {
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .reported {
+            background-color: red;
+        }
+        .not-reported {
+            background-color: green;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .input-result-container {
+                flex-direction: column;
+            }
+        }
+        .details-toggle {
+            cursor: pointer;
+        }
+        .details-content {
+            display: none;
+        }
+        .details-content.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hanuman's Guardian</h1>
+    <div class="container">
+        <!-- Parallel Boxes for IP Input and Scan Result -->
+        <div class="input-result-container">
+            <!-- Input Section -->
+            <div class="box">
+                <h2>Check For Your IP Address</h2>
+                <form method="post" id="scanForm">
+                    <label for="cidr">Enter IP Address:</label>
+                    <input type="text" id="cidr" name="cidr" required placeholder="Enter IP in format: xxx.xxx.xxx.xxx" title="Valid IP format: xxx.xxx.xxx.xxx">
+                    <button type="submit">Scan</button>
+                </form>
+                <div id="loading" style="display:none;">
+                    <div class="loader"></div>
+                </div>
+                {% if error %}
+                    <p class="error">{{ error }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Scan Result Section -->
+            <div class="box">
+                <h2>Scan Result</h2>
+                {% if cidr %}
+                    <div>
+                        <h3>Results for: {{ cidr }}</h3>
+                        {% if bad_ips %}
+                            <ul>
+                                {% for ip, details in bad_ips.items() %}
+                                    <li>
+                                        <span class="ip-status reported">
+                                            <i class="fas fa-exclamation-triangle"></i> {{ ip }} - Reported ({{ details.totalReports }} reports)
+                                        </span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="ip-status not-reported">
+                                <i class="fas fa-check-circle"></i> No report has been found for this IP
+                            </p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reported By Section -->
+        <div class="reported-by-section">
+            <h2>IP Status</h2>
+            {% if bad_ips %}
+                {% for ip, details in bad_ips.items() %}
+                    <h3>{{ ip }}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Reported For</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if details.reportedBy %}
+                                {% for report in details.reportedBy %}
+                                    <tr>
+                                        <td>
+                                            <details>
+                                                <summary class="details-toggle">View Details</summary>
+                                                <div class="details-content">
+                                                    <p><strong>Reporter:</strong> {{ report.reporterName }}</p>
+                                                    <p><strong>Date:</strong> {{ report.createdAt }}</p>
+                                                    <p><strong>Comment:</strong> {{ report.comment }}</p>
+                                                </div>
+                                            </details>
+                                        </td>
+                                        <td>
+                                            <button onclick="status('{{ ip }}', '{{ report.comment }}')">Bad Reputation</button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td>No details about reports.</td>
+                                    <td></td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                {% endfor %}
+            {% else %}
+                <p>IP has not been reported yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+    function validateIPaddress(ipaddress) {  
+        if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {  
+            return true;
+        }
+        alert("You have entered an invalid IP address!");
+        return false;
+    }
+
+    document.getElementById('cidr').addEventListener('blur', function() {
+        validateIPaddress(this.value);
+    });
+
+    document.getElementById('scanForm').addEventListener('submit', function() {
+        document.getElementById('loading').style.display = 'block';
+    });
+
+    // Toggle details visibility
+    document.querySelectorAll('.details-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            this.nextElementSibling.classList.toggle('show');
+        });
+    });
+
+    // Export functionality (simplified example)
+    function exportReport(ip, comment) {
+        const data = `IP: ${ip}\nComment: ${comment}`;
+        const blob = new Blob([data], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${ip}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    </script>
+</body>
+</html>
